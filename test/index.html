@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ZXingScanner</title>
+    <style>
+    .thumb {
+        height: 100px;
+        border: 1px solid #000;
+        margin: 10px 5px 0 0;
+        cursor: pointer;
+    }
+    #content {
+        font-size: .75em;
+    }
+    </style>
+</head>
+<body>
+    <h4>Upload some images, then click on them to scan for qr/bar codes. <input type="file" id="files" name="files[]" multiple /></h4>
+
+    <output id="list"></output>
+    <div id="content"></div>
+
+    <script>
+        // Local file uploader //
+        const handleFileSelect = evt => {
+            const files = evt.target.files; // FileList object
+
+            // Loop through the FileList and render image files as thumbnails.
+            for (let i = 0, f; f = files[i]; i++) {
+                // Only process image files.
+                if (!f.type.match('image.*')) {
+                    continue;
+                }
+
+                const reader = new FileReader();
+                // Closure to capture the file information.
+                reader.onload = (theFile => {
+                    return e => {
+                        // Render thumbnail.
+                        const span = document.createElement('SPAN');
+                        const img = new Image();
+                        img.className = 'thumb';
+                        img.src = e.target.result;
+                        img.title = escape(theFile.name);
+                        img.onclick = () => {
+                            scanImage(img);
+                        };
+
+                        span.append(img);
+                        document.getElementById('list').append(span);
+                    };
+                })(f);
+
+                // Read in the image file as a data URL.
+                reader.readAsDataURL(f);
+            }
+        }
+        document.getElementById('files').addEventListener('change', handleFileSelect, false);
+
+        // Scanner //
+        document.addEventListener('DOMContentLoaded', () => {
+            console.info('DOM ready...');
+
+            const content = document.getElementById('content');
+            ZXingScanner.init(scan => {
+                const bq = document.createElement('BLOCKQUOTE');
+                bq.textContent = scan.data;
+                content.append(bq);
+                content.append(document.createElement('HR'));
+            });
+        }, false);
+
+        const scanImage = (img) => {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            context.drawImage(img, 0, 0);
+
+            const err = ZXingScanner.scanCanvas(canvas, false);
+            if (err) {
+                console.info('No results for multi detect...', err);
+            }
+
+            const errSingle = ZXingScanner.scanCanvas(canvas, true);
+            if (errSingle) {
+                console.info('No results for single detect...', errSingle);
+            }
+        };
+    </script>
+    <script src="../zxing.js"></script>
+    <script src="../scanner.js"></script>
+</body>
+</html>
